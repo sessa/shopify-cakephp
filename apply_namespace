@@ -1,0 +1,37 @@
+#!/bin/bash
+
+# run through the important api files, and replace symbols as follows:
+#   Class -> ShopifyClass
+#   function -> shopify_function
+#   CONSTANT -> SHOPIFY_CONSTANT
+
+# todo: use actual namespacing for php5.3+
+
+files=(
+    lib/shopify_api.php
+    lib/shopify_api_config.php
+    test/shopify_api_test.php
+    PHP_Shopify_API_Documentation.rtf
+)
+classes=($(grep -P "^\s+class \w+" lib/shopify_api.php | sed "s/.*class \(\w*\){.*$/\1/g" | grep -Pv "^Shopify"))
+functions=($(grep -P "^\s+function \w+" lib/shopify_api.php | sed "s/.*function \(\w*\).*$/\1/g" | grep -Pv "^shopify_"))
+constants=($(grep -P "define.*[A-Z_]+" lib/shopify_api_config.php | sed "s/.*define('\([A-Z_]*\)',.*/\1/g" | grep -Pv "^SHOPIFY_"))
+
+test "${#classes[@]}" == "0" && echo "no classes need replacing"
+test "${#functions[@]}" == "0" && echo "no functions need replacing"
+test "${#constants[@]}" == "0" && echo "no constants need replacing"
+
+for file in ${files[@]}; do
+    for class in ${classes[@]}; do
+        echo "replacing $class in $file"
+        sed -i "s/\(\W\)$class\(\W\)/\1Shopify$class\2/g" $file
+    done
+    for function in ${functions[@]}; do
+        echo "replacing $function in $file"
+        sed -i "s/\(\W\)$function\(\W\)/\1shopify_$function\2/g" $file
+    done
+    for constant in ${constants[@]}; do
+        echo "replacing $constant in $file"
+        sed -i "s/\(\W\)$constant\(\W\)/\1SHOPIFY_$constant\2/g" $file
+    done
+done
