@@ -44,7 +44,7 @@ class ShopifyComponent extends Object {
     var $api_ssl        = false;
     var $api_ssl_pem    = false;
     var $api_ca_file    = '';
-    var $autoredirect   = true;
+    var $autoredirect   = false;
     var $autologin      = false;
     
     private $state  = array();
@@ -95,6 +95,23 @@ class ShopifyComponent extends Object {
         }
     }
     
+    function state($key = null) {
+        if(!$this->auth()) {
+            return false;
+        }
+
+        if($key) {
+            if(array_key_exists($key, $this->state)) {
+                return $this->state[$key];
+            } else {
+                return null;
+            }
+        } else {
+            return $this->state;
+        }
+        return false;
+    }
+
     function auth($key = null) {
         $data   = $this->Session->read($this->session_key);
         if($this->api && $this->api->valid() && !empty($data['Shop'])) {
@@ -190,6 +207,7 @@ class ShopifyComponent extends Object {
                     'password'  => $password,
                     'token'     => !empty($this->Controller->params['url']['t']) ? $this->Controller->params['url']['t'] : '',
                 ));
+                $this->state    = $this->Session->read($this->session_key);
                 
                 // success.
                 $this->Session->setFlash('Welcome, ' . $shop['name'] . '.');
