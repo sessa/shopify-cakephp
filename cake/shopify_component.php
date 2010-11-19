@@ -133,7 +133,7 @@ class ShopifyComponent extends Object {
         return $this->api;
     }
     
-    function login($domain, $password = null) {
+    function login($domain, $password = null, $session = true) {
         $domain = preg_replace('/^(https?:\/\/)?([^\/]+).*?$/', '$2', trim($domain));
         
         // use a session password, if we have one
@@ -153,20 +153,25 @@ class ShopifyComponent extends Object {
         
         // idiot check
         if( !@file_get_contents("http://$domain") ) {
-            $this->Session->setFlash('Doesn\'t look like that\'s a valid shop URL. Try again?');
+            if($session) {
+                $this->Session->setFlash('Doesn\'t look like that\'s a valid shop URL. Try again?');
+            }
             return false;
         }
         
         // clear the old session, saving the redirect value
-        $redirect   = $this->Session->read($this->session_key . '.redirect');
-        $this->Session->delete($this->session_key);
+        $redirect   = false;
+        if($session) {
+            $redirect   = $this->Session->read($this->session_key . '.redirect');
+            $this->Session->delete($this->session_key);
+        }
         
         if(!$password && empty($this->Controller->params['url']['t'])) {
             // we don't have a token, so send the user off to Shopify for authentication
             $this->api  = new ShopifySession($domain, null, $this->api_key, $this->api_secret);
             
             if( $this->api->valid() ) {
-                if($this->autoredirect) {
+                if($session && $this->autoredirect) {
                     // going to redirect back here after a successful authentication
                     $this->Session->write($this->session_key . '.redirect', Router::url(null, true));
                 }
@@ -200,27 +205,29 @@ class ShopifyComponent extends Object {
                 $this->cakeError('error500');
             }
             if($this->api->valid() && ($shop = $this->api->shop->get()) && empty($shop['error'])) {
-                $this->Session->write($this->session_key, array(
+                $this->state    = array(
                     'Shop'      => $shop,
                     'domain'    => $shop['domain'],
                     'effective_domain'  => $domain,
                     'password'  => $password,
                     'token'     => !empty($this->Controller->params['url']['t']) ? $this->Controller->params['url']['t'] : '',
-                ));
-                $this->state    = $this->Session->read($this->session_key);
+                );
+                if($session) {
+                    $this->Session->write($this->session_key, $this->state);
+                    $this->Session->setFlash('Welcome, ' . $shop['name'] . '.');
                 
-                // success.
-                $this->Session->setFlash('Welcome, ' . $shop['name'] . '.');
-                
-                // head back to the origin
-                if($this->autoredirect && $redirect) {
-                    $this->Session->delete($this->session_key . '.redirect');
-                    $this->Controller->redirect($redirect);
+                    // head back to the origin
+                    if($this->autoredirect && $redirect) {
+                        $this->Session->delete($this->session_key . '.redirect');
+                        $this->Controller->redirect($redirect);
+                    }
                 }
                 
                 return $shop;
             } else {
-                $this->Session->setFlash('Failed to log in.');
+                if($session) {
+                    $this->Session->setFlash('Failed to log in.');
+                }
                 return false;
             }
         }
