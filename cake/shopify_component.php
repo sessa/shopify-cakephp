@@ -233,10 +233,13 @@ class ShopifyComponent extends Object {
         }
     }
     
-    function logout() {
-        $this->Session->delete($this->session_key);
+    function logout($session = true) {
+        if($session) {
+            $this->Session->delete($this->session_key);
+        }
         unset($this->api);
-        $this->api  = null;
+        $this->api      = null;
+        $this->state    = array();
     }
     
     function __get($name) {
