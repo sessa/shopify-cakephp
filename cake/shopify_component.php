@@ -152,12 +152,18 @@ class ShopifyComponent extends Object {
         }
         
         // idiot check
-        if( !@file_get_contents("http://$domain") ) {
+        $check = curl_init("http://$domain");
+        curl_setopt($check, CURLOPT_FOLLOWLOCATION, true);;
+        curl_setopt($check, CURLOPT_USERAGENT, "Mozilla/4.0 (compatible; MSIE 5.01; Windows NT 5.0)");
+        curl_setopt($check, CURLOPT_RETURNTRANSFER, true);
+        if( !curl_exec($check) ) {
+            curl_close($check);
             if($session) {
                 $this->Session->setFlash('Doesn\'t look like that\'s a valid shop URL. Try again?');
             }
             return false;
         }
+        curl_close($check);
         
         // clear the old session, saving the redirect value
         $redirect   = false;
