@@ -28,8 +28,12 @@
 	function shopify_url_encode_array($params){
 		$string = '';
 		if (is_array($params)){
-			foreach($params as $k => $v) if (!is_array($v)) $string .= $k.'='.str_replace(' ', '%20', $v).'&';
-			$string = substr($string, 0, strlen($string) - 1);
+			if(function_exists('http_build_query')) {
+				$string = http_build_query($params);
+			} else {
+				foreach($params as $k => $v) if (!is_array($v)) $string .= $k.'='.str_replace(' ', '%20', $v).'&';
+				$string = substr($string, 0, strlen($string) - 1);
+			}
 		}
 		return $string;
 	}
@@ -543,6 +547,83 @@
 		
 		public function remove($id){
 			return shopify_sendToAPI($this->prefix . "countries/" . $id, 'DELETE');
+		}
+		
+		public function __destruct(){
+			unset($this->prefix);
+			unset($this->array);
+		}
+	}
+	
+	class ShopifyCustomer {
+		private $prefix = "/";
+		private $array;
+		
+		public function __construct($site){
+			$this->prefix = $site . $this->prefix;
+		}
+		
+		public function get($id = 0, $cache = false){
+			if ($id == 0){
+				if (!$cache && !isset($this->array['customer'])) $this->array = shopify_organizeArray(shopify_sendToAPI($this->prefix . "customers"), 'customer');
+				return $this->array['customer'];
+			}else{
+				if (!$cache || !isset($this->array['customer'][$id])){
+					$temp = shopify_sendToAPI($this->prefix . "customers/" . $id);
+					$this->array['customer'][$id] = $temp;
+				}
+				return $this->array['country'][$id];
+			}
+		}
+		
+		public function search($params = array()){
+			$params = shopify_url_encode_array($params);
+			return shopify_sendToAPI($this->prefix . "customers/search?" . $params, 'GET');
+		}
+		
+		public function create($fields){
+			$fields = array('customer' => $fields);
+			return shopify_sendToAPI($this->prefix . "customers", 'POST', $fields);
+		}
+		
+		public function modify($id, $fields){
+			$fields = array('customer' => $fields);
+			return shopify_sendToAPI($this->prefix . "customers/" . $id, 'PUT', $fields);
+		}
+		
+		public function __destruct(){
+			unset($this->prefix);
+			unset($this->array);
+		}
+	}
+	
+	class ShopifyCustomerGroup {
+		private $prefix = "/";
+		private $array;
+		
+		public function __construct($site){
+			$this->prefix = $site . $this->prefix;
+			$this->customer = new ShopifyCustomer($site, "customer_group");
+		}
+		
+		public function get($id = 0, $params = array(), $cache = false){
+			if ($id == 0){
+				if (!$cache || !isset($this->array['customer_group'])){
+					$params = shopify_url_encode_array($params);
+					$this->array = shopify_organizeArray(shopify_sendToAPI($this->prefix . "customer_groups?" . $params), 'customer-group');
+				}			
+				return $this->array['customer-group'];
+			}else{
+				if (!$cache || !isset($this->array['customer-group'][$id])){
+					$temp = shopify_sendToAPI($this->prefix . "customer_groups/" . $id);
+					$this->array['customer-group'][$id] = $temp;
+				}
+				return $this->array['customer-group'][$id];
+			}
+		}
+		
+		public function get_customers($id){
+			return shopify_sendToAPI($this->prefix . "customer_groups/$id/customers");
 		}
 		
 		public function __destruct(){
@@ -1189,6 +1270,8 @@
 		public $comment;
 		public $country;
 		public $custom_collection;
+		public $customer;
+		public $customer_group;
 		public $event;
 		public $fulfillment;
 		public $metafield;
@@ -1233,6 +1316,8 @@
 				$this->comment 						= new ShopifyComment($this->site());
 				$this->country 						= new ShopifyCountry($this->site());
 				$this->custom_collection 			= new ShopifyCustomCollection($this->site());
+				$this->customer						= new ShopifyCustomer($this->site());
+				$this->customer_group				= new ShopifyCustomerGroup($this->site());
 				$this->event 						= new ShopifyEvent($this->site());
 				$this->fulfillment					= new ShopifyFulfillment($this->site());
 				$this->metafield 					= new ShopifyMetafield($this->site(), "");
