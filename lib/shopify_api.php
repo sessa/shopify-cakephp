@@ -623,7 +623,7 @@
 		}
 		
 		public function get_customers($id){
-			return shopify_sendToAPI($this->prefix . "customer_groups/$id/customers");
+			return shopify_organizeArray(shopify_sendToAPI($this->prefix . "customer_groups/$id/customers"), 'customer');
 		}
 		
 		public function __destruct(){
