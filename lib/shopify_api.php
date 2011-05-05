@@ -1216,6 +1216,7 @@
 		
 		public function get($id = 0, $params = array(), $cache = false){
 			if ($id == 0){
+				$params = shopify_url_encode_array($params);
 				if (!$cache || !isset($this->array['webhook'])) $this->array = shopify_organizeArray(shopify_sendToAPI($this->prefix . "webhooks?" . $params), 'webhook');
 				return $this->array['webhook'];
 			}else{
