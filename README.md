@@ -1,4 +1,4 @@
-shopify-cakephp
+shopify-sandbox
 ================
 
 This project integrates the Shopify PHP API with CakePHP.
